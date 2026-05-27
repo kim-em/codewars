@@ -75,9 +75,9 @@ See [`docs/trust-model.md`](docs/trust-model.md) for the long version.
 
 ## Status
 
-Work in progress. The slim runner is validated end-to-end on a
-development machine (PASS + FAIL paths, both file conventions). The
-mathlib variant is structured the same way and pins mathlib4 at
-`v4.30.0` via path-dep; image build itself is not yet exercised
-locally. Tracking the writeup in
-[`docs/proposal.md`](docs/proposal.md).
+Both images green in CI on a standard `ubuntu-24.04` runner —
+PASS + FAIL paths on all three example katas. Measured sizes: slim
+3.85 GB, mathlib 11.95 GB. The mathlib kata wall time (~50s on a
+2-core GitHub runner) is currently the main concern vs. Codewars'
+20s Lean budget; see [`docs/proposal.md`](docs/proposal.md) for the
+discussion.

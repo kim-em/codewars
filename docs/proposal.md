@@ -25,18 +25,16 @@ on the maintenance burden of the underlying judging stack.
 
 ## Two images, both at v4.30.0
 
-| Image                          | Size        | Contents                                                              |
-|--------------------------------|-------------|-----------------------------------------------------------------------|
-| `codewars-lean4:slim`          | ~3.85 GB    | Lean v4.30.0 + comparator + lean4export + landrun                     |
-| `codewars-lean4:mathlib`       | ~10 GB est. | slim + mathlib4 v4.30.0 with a verified-complete olean cache          |
+| Image                          | Size       | Contents                                                              |
+|--------------------------------|------------|-----------------------------------------------------------------------|
+| `codewars-lean4:slim`          | 3.85 GB    | Lean v4.30.0 + comparator + lean4export + landrun                     |
+| `codewars-lean4:mathlib`       | 11.95 GB   | slim + mathlib4 v4.30.0 with cached oleans and a pre-resolved manifest |
 
-Slim size is measured by CI on the actual `Dockerfile.slim`
-(https://github.com/kim-em/codewars/actions/runs/26521756301). The
-toolchain itself is the dominant cost — Lean's distribution includes
-core stdlib oleans and Lake. The mathlib estimate is projected from
-mathlib4's documented olean cache (~6 GB) on top of the measured slim
-base; will be replaced with a measurement once the mathlib image is
-built in CI.
+Both sizes measured by CI on a standard `ubuntu-24.04` runner. The
+toolchain itself dominates the slim base — Lean's distribution
+includes core stdlib oleans and Lake. Mathlib's olean cache (~6 GB)
+is the dominant cost of the mathlib layer, plus a smaller cost for
+a pre-resolved skeleton workspace that lets katas build offline.
 
 The Lean 3 corpus on Codewars today is authored against mathlib3
 (see https://docs.codewars.com/languages/lean/). Existing katas that
@@ -95,35 +93,44 @@ from Mathlib.
 
 ## Operational characteristics
 
-- **Image sizes:** slim measures at ~3.85 GB in CI; mathlib variant
-  is projected at ~10 GB, with mathlib's olean cache adding ~6 GB
-  on top. The mathlib image builds FROM slim, so the slim image is
-  a strict subset.
+- **Image sizes:** slim 3.85 GB, mathlib 11.95 GB (both measured in
+  CI). The mathlib image builds FROM slim, so the slim image is a
+  strict subset.
 
-- **Runtime budget:** comparator's cold-start cost on a pre-built
-  workspace is the figure that needs to fit inside Codewars'
-  documented 20s Lean timeout. On the slim image, local measurement
-  on `examples/comparator-direct/two-plus-two` shows ~2-3s per
-  judging (Lean compile + comparator export + kernel replay), well
-  inside budget. On the mathlib image, `import Mathlib` is the
-  dominant cost — single-digit seconds with a warm cache, more on
-  cold start.
+- **Runtime budget:** Codewars' Lean 3 docs list a 20s submission
+  timeout. CI measurements on a standard `ubuntu-24.04` runner:
 
-  Both need to be reconfirmed inside the production Codewars
-  container. A benchmark step lives in `scripts/benchmark.sh` and
-  runs during `docker build` via `verify-installation.sh`. Numbers
-  will be added here before final submission.
+  | Image    | Kata                                  | Wall time per submission |
+  |----------|---------------------------------------|--------------------------|
+  | slim     | `examples/codewars-shape` (core only) | ~3s                      |
+  | mathlib  | `examples/mathlib-shape` (`import Mathlib`) | **~50s**           |
 
-  Mitigation for mathlib's import cost: kata authors can import
-  specific Mathlib submodules (e.g. `import Mathlib.Data.Real.Basic`)
-  instead of `import Mathlib` to cut load time substantially. The
-  worked mathlib example shows the convenient form; documentation
-  recommends the surgical form for production katas.
+  Slim is comfortably inside budget. **Mathlib is not.** The cost is
+  dominated by Lean elaborating the full Mathlib import graph and
+  comparator exporting + kernel-replaying the resulting Challenge
+  module, which under `import Mathlib` reaches into thousands of
+  transitive declarations.
+
+  Two mitigations available, neither yet exercised:
+
+  1. **Surgical imports.** Kata authors can `import Mathlib.Data.Real.Basic`
+     instead of `import Mathlib`, cutting elaboration / export to seconds.
+     `docs/kata-format.md` recommends this; the worked example uses the
+     convenient form for clarity.
+  2. **Lifted timeout for mathlib katas.** Codewars may need to raise
+     the budget to 60s for kata's tagged as targeting the mathlib image.
+     Worth a measurement on Codewars' production hardware first —
+     ubuntu-24.04 GitHub runners are 2-core and may be slower than
+     Codewars' production fleet.
+
+  This is the most consequential operational discussion-point with
+  Codewars maintainers; it's the difference between mathlib katas
+  being usable as-is vs. requiring author-side discipline or a
+  budget bump.
 
 - **Network:** neither runner needs network at submission time.
-  `docker run --network=none` is supported and used in the
-  verification kata. Mathlib is bundled as a path-dep, not pulled
-  by Lake at runtime.
+  `docker run --network=none` is supported and verified in CI for
+  both images.
 
 - **User code is sandboxed.** Submissions never elaborate outside
   `landrun`. The `defaultTargets = ["workspace_test"]` setting in the

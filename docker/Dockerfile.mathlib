@@ -6,9 +6,8 @@
 ## Build:  docker build -t codewars-lean4:slim    -f docker/Dockerfile.slim    .
 ##         docker build -t codewars-lean4:mathlib -f docker/Dockerfile.mathlib .
 ##
-## Image size: projected ~10 GB. The slim base is ~3.85 GB (measured
-## in CI) and mathlib's olean cache adds ~6 GB on top. Will be
-## reconfirmed once the mathlib image is exercised in CI.
+## Image size: 11.95 GB (measured in CI). The slim base is 3.85 GB and
+## mathlib's olean cache + skeleton workspace add ~8 GB on top.
 
 FROM codewars-lean4:slim
 
