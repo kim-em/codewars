@@ -1,0 +1,3 @@
+-- De Morgan's law: this requires classical reasoning. The runner's
+-- permitted axioms include `Classical.choice`, which makes
+-- `Classical.em` and `by_cases` available.
