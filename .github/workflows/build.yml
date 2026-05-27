@@ -56,3 +56,22 @@ jobs:
             exit 1
           fi
           echo "Negative test passed (exit ${exit_code})."
+
+      - name: Verify all starter katas
+        run: |
+          shopt -s nullglob
+          fail=0
+          for kata in starter-katas/*/; do
+            slug="$(basename "${kata}")"
+            echo "::group::Starter kata: ${slug}"
+            if docker run --rm --network=none \
+                 -v "$(pwd)/${kata}:/workdir:ro" \
+                 codewars-lean4:slim --mode codewars /workdir; then
+              echo "${slug}: PASS"
+            else
+              echo "::error::Starter kata ${slug} did not pass"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "${fail}"
