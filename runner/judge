@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Top-level entrypoint. Builds the trusted workspace_test exe, then runs
+# comparator (which sandboxes the user's Submission via landrun) and
+# emits a Codewars-format result line.
+#
+# Usage:
+#   judge                                       # auto-detect mode in cwd
+#   judge --mode codewars <indir>               # Codewars file shape:
+#                                               #   Preloaded.lean,
+#                                               #   Solution.lean,
+#                                               #   SolutionTest.lean
+#   judge --mode comparator-direct <workspace>  # already a comparator
+#                                               # workspace
+#
+# Exit codes:
+#   0  accepted by comparator
+#   1  rejected (proof wrong / uses disallowed axiom / sorry / etc.)
+#   2  infra error (missing tool, malformed kata, etc.)
+set -euo pipefail
+
+RUNNER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${RUNNER_DIR}/.." && pwd)"
+# shellcheck source=../versions.env
+source "${REPO_ROOT}/versions.env"
+
+# Be tolerant of either prepare-runner.sh-installed binaries or
+# already-on-PATH ones (e.g. when invoked from a dev shell that has
+# lean-eval's installation).
+export PATH="${CODEWARS_BIN_DIR}:${HOME}/.elan/bin:${PATH}"
+
+MODE=""
+INDIR=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --mode) MODE="$2"; shift 2 ;;
+        -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+        *) INDIR="$1"; shift ;;
+    esac
+done
+
+INDIR="${INDIR:-$(pwd)}"
+INDIR="$(cd "${INDIR}" && pwd)"
+
+# Auto-detect mode if not specified.
+if [ -z "${MODE}" ]; then
+    if [ -f "${INDIR}/config.json" ] && [ -f "${INDIR}/Challenge.lean" ]; then
+        MODE="comparator-direct"
+    elif [ -f "${INDIR}/SolutionTest.lean" ]; then
+        MODE="codewars"
+    else
+        echo "<ERROR::>Could not detect kata mode in ${INDIR}." >&2
+        echo "Expected either (Preloaded.lean, Solution.lean, SolutionTest.lean)" >&2
+        echo "or (Challenge.lean, Solution.lean, Submission.lean, config.json)." >&2
+        exit 2
+    fi
+fi
+
+WORKDIR="$(mktemp -d -t codewars-lean4-XXXXXXXX)"
+trap 'rm -rf "${WORKDIR}"' EXIT
+
+case "${MODE}" in
+    codewars)
+        python3 "${RUNNER_DIR}/adapter.py" "${INDIR}" "${WORKDIR}"
+        ;;
+    comparator-direct)
+        # Copy the workspace so we don't mutate the input.
+        cp -r "${INDIR}/." "${WORKDIR}/"
+        ;;
+    *)
+        echo "<ERROR::>Unknown --mode: ${MODE}" >&2
+        exit 2
+        ;;
+esac
+
+cd "${WORKDIR}"
+
+# Pin the toolchain (overrides anything in the user-provided workspace).
+cp "${RUNNER_DIR}/workspace-template/lean-toolchain" lean-toolchain
+
+# Build ONLY the trusted exe. defaultTargets in workspace-template/lakefile.toml
+# is set to ["workspace_test"], so this does NOT elaborate Submission.lean.
+# Capture build output for diagnostics.
+BUILD_LOG="${WORKDIR}/.build.log"
+if ! lake build workspace_test >"${BUILD_LOG}" 2>&1; then
+    echo "<ERROR::>workspace_test build failed (infra error, not your code)." >&2
+    cat "${BUILD_LOG}" >&2
+    exit 2
+fi
+
+# Now invoke comparator. This is the sandboxed verification step:
+# comparator builds Challenge + Solution + Submission inside landrun,
+# exports them with lean4export, and checks that Solution's theorems
+# match Challenge's statements and use only permitted axioms.
+COMPARATOR_LOG="${WORKDIR}/.comparator.log"
+set +e
+lake env comparator config.json >"${COMPARATOR_LOG}" 2>&1
+COMPARATOR_EXIT=$?
+set -e
+
+# Emit Codewars-format verdict.
+"${RUNNER_DIR}/emit-codewars.sh" "${COMPARATOR_EXIT}" "${COMPARATOR_LOG}"
+exit "${COMPARATOR_EXIT}"

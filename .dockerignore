@@ -1,0 +1,8 @@
+.git
+.gitignore
+docs/
+README.md
+versions.lock
+*.log
+__pycache__/
+*.pyc

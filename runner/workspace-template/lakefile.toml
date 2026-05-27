@@ -1,0 +1,27 @@
+name = "codewars-kata"
+testDriver = "workspace_test"
+
+# IMPORTANT: only the trusted workspace_test target is in defaultTargets.
+# `lake build` (outside comparator) builds the exe — which only imports
+# `Lean` core — and does NOT elaborate user code. User code in
+# Submission.lean is built by comparator inside landrun.
+defaultTargets = ["workspace_test"]
+
+[leanOptions]
+autoImplicit = false
+
+[[lean_lib]]
+name = "ChallengeDeps"
+
+[[lean_lib]]
+name = "Challenge"
+
+[[lean_lib]]
+name = "Solution"
+
+[[lean_lib]]
+name = "Submission"
+
+[[lean_exe]]
+name = "workspace_test"
+root = "WorkspaceTest"

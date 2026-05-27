@@ -1,0 +1,59 @@
+## codewars-lean4 runner: slim variant.
+## Bundles Lean v4.30.0 + comparator + lean4export + landrun. No Mathlib.
+## Phase-2 work to add a Mathlib variant lives in docs/proposal.md.
+##
+## Build:  docker build -t codewars-lean4:slim -f docker/Dockerfile .
+## Run:    docker run --rm --network=none -v $(pwd)/kata:/workdir:ro codewars-lean4:slim
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    CODEWARS_PREFIX=/opt/codewars \
+    CODEWARS_TOOLS_DIR=/opt/codewars/tools \
+    CODEWARS_BIN_DIR=/opt/codewars/bin
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        git \
+        build-essential \
+        python3 \
+        golang-go \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root user for everything below. UID/GID 1100 picked to avoid
+# collisions with Codewars' runner UIDs if they happen to share the
+# host namespace.
+RUN groupadd -g 1100 judge \
+    && useradd  -u 1100 -g 1100 -m -d /home/judge -s /bin/bash judge \
+    && mkdir -p /opt/codewars /workdir \
+    && chown -R judge:judge /opt/codewars /workdir
+
+USER judge
+WORKDIR /opt/codewars
+
+COPY --chown=judge:judge versions.env  lean-toolchain  ./
+COPY --chown=judge:judge scripts/      ./scripts/
+COPY --chown=judge:judge runner/       ./runner/
+
+# Install elan + toolchain + comparator + lean4export + landrun, and
+# run the verification kata. We DO NOT bundle examples/ — they're for
+# repository readers, not the runtime image.
+COPY --chown=judge:judge examples/comparator-direct ./examples/comparator-direct
+RUN bash scripts/prepare-runner.sh \
+    && bash scripts/verify-installation.sh \
+    && rm -rf examples
+
+# Prune build trees we don't need at runtime to keep image size down.
+# We keep the .lake/build/bin/<tool> binaries (symlinked from
+# CODEWARS_BIN_DIR) and the toolchain.
+RUN find /opt/codewars/tools -name '*.olean' -delete \
+    && find /opt/codewars/tools -path '*/.lake/build/ir/*' -delete \
+    && find /opt/codewars/tools -path '*/.lake/build/lib/*' -delete \
+    && rm -rf /opt/codewars/tools/comparator/.lake/packages \
+              /opt/codewars/tools/lean4export/.lake/packages \
+              /opt/codewars/tools/landrun/.git
+
+WORKDIR /workdir
+ENTRYPOINT ["/opt/codewars/runner/judge"]

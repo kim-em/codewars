@@ -1,0 +1,22 @@
+name = "two-plus-two"
+testDriver = "workspace_test"
+defaultTargets = ["workspace_test"]
+
+[leanOptions]
+autoImplicit = false
+
+[[lean_lib]]
+name = "ChallengeDeps"
+
+[[lean_lib]]
+name = "Challenge"
+
+[[lean_lib]]
+name = "Solution"
+
+[[lean_lib]]
+name = "Submission"
+
+[[lean_exe]]
+name = "workspace_test"
+root = "WorkspaceTest"

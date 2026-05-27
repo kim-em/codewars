@@ -1,0 +1,11 @@
+# Generated at runtime by prepare-runner.sh, recording resolved SHAs.
+versions.lock
+
+# Local test artifacts.
+*.log
+__pycache__/
+*.pyc
+
+# Lake build outputs (we never ship these in tree).
+.lake/
+.lake-cache/

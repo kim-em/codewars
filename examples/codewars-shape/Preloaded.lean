@@ -1,0 +1,4 @@
+-- Trusted definitions and imports for this kata.
+-- The kata author writes anything they want here; it becomes
+-- ChallengeDeps.lean in the synthesised comparator workspace and is
+-- imported by Challenge.lean, Solution.lean, and Submission.lean.
