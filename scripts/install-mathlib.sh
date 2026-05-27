@@ -27,4 +27,27 @@ git checkout --quiet "${MATHLIB_SHA}"
 echo ">>> Fetching mathlib olean cache (large download, several GB)"
 lake exe cache get
 
+# After cache get, ${CODEWARS_MATHLIB_DIR}/.lake/packages/ contains every
+# transitive dep mathlib needs (aesop, batteries, Qq, proofwidgets,
+# plausible, importGraph, LeanSearchClient, ...). The runtime workspace
+# must declare path-deps for each of these so Lake doesn't try to
+# re-clone them at submission time (when the container has no network).
+LAKEFILE="${REPO_ROOT}/runner/workspace-template-mathlib/lakefile.toml"
+{
+    echo ""
+    echo "# Path-deps for mathlib's transitive dependencies, appended at"
+    echo "# install-mathlib.sh time so the runtime workspace builds with"
+    echo "# --network=none. Order of these entries does not matter."
+    for pkg_dir in "${CODEWARS_MATHLIB_DIR}/.lake/packages/"*; do
+        [ -d "${pkg_dir}" ] || continue
+        pkg_name="$(basename "${pkg_dir}")"
+        echo ""
+        echo "[[require]]"
+        echo "name = \"${pkg_name}\""
+        echo "path = \"${pkg_dir}\""
+    done
+} >> "${LAKEFILE}"
+
 echo ">>> mathlib4 installed at ${CODEWARS_MATHLIB_DIR}"
+echo ">>> Transitive packages registered in ${LAKEFILE}:"
+ls -1 "${CODEWARS_MATHLIB_DIR}/.lake/packages/"
