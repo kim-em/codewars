@@ -1,0 +1,64 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  slim-image:
+    name: Build & verify slim image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build codewars-lean4:slim
+        run: |
+          docker build \
+            -t codewars-lean4:slim \
+            -f docker/Dockerfile.slim \
+            .
+
+      - name: Print image size
+        run: docker image inspect codewars-lean4:slim --format '{{.Size}}'
+
+      - name: Run comparator-direct example through the image
+        run: |
+          docker run --rm --network=none \
+            -v "$(pwd)/examples/comparator-direct:/workdir:ro" \
+            codewars-lean4:slim --mode comparator-direct /workdir
+
+      - name: Run codewars-shape example through the image
+        run: |
+          docker run --rm --network=none \
+            -v "$(pwd)/examples/codewars-shape:/workdir:ro" \
+            codewars-lean4:slim --mode codewars /workdir
+
+      - name: Negative test (sorry submission must be rejected)
+        run: |
+          mkdir -p /tmp/bad-kata
+          cp -r examples/codewars-shape/. /tmp/bad-kata/
+          cat > /tmp/bad-kata/Solution.lean <<'EOF'
+          theorem cos_zero_eq_one : Real.cos 0 = 1 := by sorry
+          theorem add_comm_demo (a b : Nat) : a + b = b + a := by sorry
+          EOF
+          # The mathlib-shape spec; replace the codewars-shape spec to match.
+          cp -f examples/codewars-shape/SolutionTest.lean /tmp/bad-kata/SolutionTest.lean
+          cat > /tmp/bad-kata/Solution.lean <<'EOF'
+          theorem two_plus_two : (2 : Nat) + 2 = 4 := by sorry
+          theorem add_comm_demo (a b : Nat) : a + b = b + a := by sorry
+          EOF
+          set +e
+          docker run --rm --network=none \
+            -v /tmp/bad-kata:/workdir:ro \
+            codewars-lean4:slim --mode codewars /workdir
+          exit_code=$?
+          set -e
+          if [ "${exit_code}" != "1" ]; then
+            echo "::error::Expected exit 1 (rejection), got ${exit_code}"
+            exit 1
+          fi
+          echo "Negative test passed (exit ${exit_code})."
