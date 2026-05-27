@@ -1,6 +1,6 @@
 ## codewars-lean4 runner: slim variant.
-## Bundles Lean v4.30.0 + comparator + lean4export + landrun. No Mathlib.
-## For Mathlib-using katas, use Dockerfile.mathlib (which extends this).
+## Bundles Lean v4.30.0 + comparator + lean4export + landrun. No Mathlib;
+## see docs/proposal.md for the rationale.
 ##
 ## Build:  docker build -t codewars-lean4:slim -f docker/Dockerfile.slim .
 ## Run:    docker run --rm --network=none -v $(pwd)/kata:/workdir:ro codewars-lean4:slim

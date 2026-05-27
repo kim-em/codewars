@@ -18,16 +18,9 @@ shouldn't have to re-derive. The runner copies this verbatim into
 `ChallengeDeps.lean` inside the comparator workspace; every other
 Lean module in the workspace imports it.
 
-Pure-Lean katas can leave this file empty (just a one-line comment)
-and target the `codewars-lean4:slim` runner. Mathlib-using katas
-import Mathlib (or a specific submodule) from `Preloaded.lean` and
-target the `codewars-lean4:mathlib` runner — see
-`examples/mathlib-shape/` for a worked example.
-
-For mathlib katas, prefer importing specific submodules
-(`import Mathlib.Data.Real.Basic`) over `import Mathlib` (the whole
-library) — the latter adds ~5–10s of elaboration overhead on a warm
-cache.
+For the slim image (the only image currently shipped), `Preloaded.lean`
+can import anything in core Lean. Mathlib is not available; Mathlib
+support is tracked as future work in `docs/proposal.md`.
 
 ### `SolutionTest.lean` (trusted)
 
@@ -138,8 +131,6 @@ generates a fixed list.)
   itself contains `sorry`. lean4export will embed `sorryAx`
   references and the diff comparator runs will fail (see
   `lean-comparator` skill, gotcha #2).
-- Make sure the kata's `lean4-image` field matches what `Preloaded.lean`
-  imports: a kata that imports Mathlib must run on `codewars-lean4:mathlib`,
-  not `codewars-lean4:slim`. The runner reports a clear infra error if
-  the imports don't resolve, but the failure is on the kata configuration,
-  not the user's submission.
+- Don't `import Mathlib` (or any Mathlib submodule) from
+  `Preloaded.lean`. The slim runner image doesn't bundle Mathlib;
+  the import will fail with an unresolved-module error.

@@ -77,21 +77,6 @@ cd "${WORKDIR}"
 # Pin the toolchain (overrides anything in the user-provided workspace).
 cp "${RUNNER_DIR}/workspace-template/lean-toolchain" lean-toolchain
 
-# Mathlib variant only: inherit the pre-built skeleton's lake state.
-# The skeleton was prepared by scripts/install-mathlib.sh at image-build
-# time and includes a resolved lake-manifest.json plus a fully built
-# .lake/ tree (mathlib oleans, proofwidgets widget bundle, etc.).
-#
-# Hardlink-copy is the right primitive: instant (no data duplication),
-# writeable (any modify creates a new inode, leaving the skeleton
-# pristine), and avoids the symlink-write-through-permissions trap
-# that broke an earlier attempt.
-SKELETON="${CODEWARS_PREFIX:-/opt/codewars}/mathlib-skeleton"
-if [ -f "${SKELETON}/lake-manifest.json" ]; then
-    cp -al "${SKELETON}/lake-manifest.json" lake-manifest.json
-    cp -al "${SKELETON}/.lake" .lake
-fi
-
 # Build ONLY the trusted exe. defaultTargets in workspace-template/lakefile.toml
 # is set to ["workspace_test"], so this does NOT elaborate Submission.lean.
 # Capture build output for diagnostics.

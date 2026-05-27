@@ -42,12 +42,6 @@ jobs:
           mkdir -p /tmp/bad-kata
           cp -r examples/codewars-shape/. /tmp/bad-kata/
           cat > /tmp/bad-kata/Solution.lean <<'EOF'
-          theorem cos_zero_eq_one : Real.cos 0 = 1 := by sorry
-          theorem add_comm_demo (a b : Nat) : a + b = b + a := by sorry
-          EOF
-          # The mathlib-shape spec; replace the codewars-shape spec to match.
-          cp -f examples/codewars-shape/SolutionTest.lean /tmp/bad-kata/SolutionTest.lean
-          cat > /tmp/bad-kata/Solution.lean <<'EOF'
           theorem two_plus_two : (2 : Nat) + 2 = 4 := by sorry
           theorem add_comm_demo (a b : Nat) : a + b = b + a := by sorry
           EOF
@@ -55,75 +49,6 @@ jobs:
           docker run --rm --network=none \
             -v /tmp/bad-kata:/workdir:ro \
             codewars-lean4:slim --mode codewars /workdir
-          exit_code=$?
-          set -e
-          if [ "${exit_code}" != "1" ]; then
-            echo "::error::Expected exit 1 (rejection), got ${exit_code}"
-            exit 1
-          fi
-          echo "Negative test passed (exit ${exit_code})."
-
-  mathlib-image:
-    name: Build & verify mathlib image
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Free up disk on the runner
-        # GitHub free runners ship with ~14 GB free; we expect to use
-        # most of it. Drop the bigger pre-installed toolchains we don't
-        # need (Android SDK, .NET, Haskell, CodeQL, Swift) to reclaim
-        # ~30 GB of headroom.
-        run: |
-          df -h /
-          sudo rm -rf /usr/share/dotnet \
-                      /usr/local/lib/android \
-                      /usr/local/share/boost \
-                      /opt/ghc \
-                      /opt/hostedtoolcache/CodeQL \
-                      /usr/local/share/swift || true
-          docker system prune -af || true
-          df -h /
-
-      - name: Build codewars-lean4:slim (base for mathlib)
-        run: |
-          docker build \
-            -t codewars-lean4:slim \
-            -f docker/Dockerfile.slim \
-            .
-
-      - name: Build codewars-lean4:mathlib
-        run: |
-          docker build \
-            -t codewars-lean4:mathlib \
-            -f docker/Dockerfile.mathlib \
-            .
-
-      - name: Print image size
-        run: |
-          docker image inspect codewars-lean4:slim    --format 'slim: {{.Size}}'
-          docker image inspect codewars-lean4:mathlib --format 'mathlib: {{.Size}}'
-          df -h /
-
-      - name: Run mathlib-shape example through the image
-        run: |
-          docker run --rm --network=none \
-            -v "$(pwd)/examples/mathlib-shape:/workdir:ro" \
-            codewars-lean4:mathlib --mode codewars /workdir
-
-      - name: Negative test on mathlib kata (sorry must be rejected)
-        run: |
-          mkdir -p /tmp/bad-mathlib
-          cp -r examples/mathlib-shape/. /tmp/bad-mathlib/
-          cat > /tmp/bad-mathlib/Solution.lean <<'EOF'
-          theorem cos_zero_eq_one : Real.cos 0 = 1 := by sorry
-          theorem range_card_demo (n : Nat) : (Finset.range n).card = n := by sorry
-          EOF
-          set +e
-          docker run --rm --network=none \
-            -v /tmp/bad-mathlib:/workdir:ro \
-            codewars-lean4:mathlib --mode codewars /workdir
           exit_code=$?
           set -e
           if [ "${exit_code}" != "1" ]; then
