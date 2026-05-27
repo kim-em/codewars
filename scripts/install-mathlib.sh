@@ -27,30 +27,41 @@ git checkout --quiet "${MATHLIB_SHA}"
 echo ">>> Fetching mathlib olean cache (large download, several GB)"
 lake exe cache get
 
-# Build a skeleton workspace and resolve its dependencies ONCE here
-# (with network). Mathlib's post-update hook runs as part of `lake
-# update`, generating a lake-manifest.json that pins every transitive
-# dep at the SHA mathlib itself pins. We then reuse the skeleton's
-# manifest + .lake/packages/ for every kata submission, so submissions
-# build with --network=none and don't trigger the post-update hook.
+# Build a skeleton workspace that mirrors the runtime kata workspace,
+# resolve its dependencies, and BUILD workspace_test ONCE here (with
+# network). This:
+#   - generates lake-manifest.json pinning every transitive dep at
+#     the SHA mathlib itself pins (so kata submissions never run the
+#     post-update hook),
+#   - runs proofwidgets' widget npm install + bundle (so kata
+#     submissions don't try to replay it offline),
+#   - leaves .lake/packages and .lake/build in a clean state that
+#     submissions hardlink-copy at runtime.
 SKELETON="${CODEWARS_PREFIX}/mathlib-skeleton"
 echo ">>> Building mathlib workspace skeleton at ${SKELETON}"
 mkdir -p "${SKELETON}"
 cd "${SKELETON}"
 
-cat > lakefile.toml <<EOF
-name = "mathlib-skeleton"
+# The skeleton's lakefile is exactly the runtime workspace template
+# (so its manifest is valid for the runtime workspace too).
+cp "${REPO_ROOT}/runner/workspace-template-mathlib/lakefile.toml" lakefile.toml
+cp "${REPO_ROOT}/runner/workspace-template/lean-toolchain"        lean-toolchain
+cp "${REPO_ROOT}/runner/workspace-template/WorkspaceTest.lean"    WorkspaceTest.lean
+# Empty stubs so lean_lib targets resolve. Will be overwritten by the
+# adapter at submission time.
+: > ChallengeDeps.lean
+: > Challenge.lean
+: > Solution.lean
+: > Submission.lean
 
-[[require]]
-name = "mathlib"
-path = "${CODEWARS_MATHLIB_DIR}"
-EOF
-
-cp "${REPO_ROOT}/runner/workspace-template/lean-toolchain" lean-toolchain
-
-# Triggers cloning of mathlib's transitive deps into .lake/packages/
-# and writes a lake-manifest.json. Network required here; never again.
+# Network access here. Resolves transitive deps, triggers post-update.
 lake update
+
+# Builds workspace_test (trusted exe importing only Lean) plus the
+# transitive build steps it needs — including proofwidgets/widget's
+# npm install. Bounded build time even on a free runner because
+# mathlib's oleans are already cached.
+lake build workspace_test
 
 echo ">>> Skeleton populated:"
 ls -1 "${SKELETON}/.lake/packages/" 2>/dev/null || echo "(none)"
