@@ -52,7 +52,8 @@ scripts/                  # prepare-runner + install-* scripts
 runner/                   # judge entrypoint + adapter + templates
 docker/Dockerfile.slim    # runner image
 examples/                 # example katas (both file conventions)
-docs/                     # kata-format, trust-model, upstream proposal
+starter-katas/            # ten launch katas (7–4 kyu), CI-verified
+docs/                     # kata-format, solver-guide, trust-model, proposal
 ```
 
 ## Trust model (one-paragraph version)

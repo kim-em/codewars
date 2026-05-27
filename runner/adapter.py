@@ -64,6 +64,12 @@ def parse_theorems(source: str) -> list[tuple[str, int, int]]:
     """Return [(name, start_offset_of_body, end_offset_of_body), ...]
     where the body is the text after `:=` and before the next top-level
     item. Both offsets are into `source`.
+
+    Also enforces that the theorem *type* (text between the theorem head
+    and `:=`) does not reference `Submission.*`. If it does, Challenge.lean
+    will fail to build with a confusing "unknown identifier" error since
+    Challenge intentionally does not import Submission — so we surface a
+    targeted author error before that.
     """
     items: list[tuple[str, int, int]] = []
     for head in THEOREM_HEAD.finditer(source):
@@ -73,6 +79,17 @@ def parse_theorems(source: str) -> list[tuple[str, int, int]]:
         i = source.find(":=", head.end())
         if i < 0:
             fail(f"theorem '{name}' in SolutionTest.lean has no ':=' body")
+        # Preflight: reject Submission.* in the type (everything between
+        # the theorem head and `:=`). Author error, not solver error.
+        type_text = source[head.end() : i]
+        if "Submission." in type_text:
+            fail(
+                f"Kata authoring error: theorem '{name}' in SolutionTest.lean "
+                f"references `Submission.*` in its type. Only the theorem "
+                f"BODY (after `:=`) may reference `Submission.<name>`. The "
+                f"trusted spec must state the theorem in terms of names "
+                f"defined in Preloaded.lean."
+            )
         body_start = i + len(":=")
         # Body ends at the next top-level keyword or EOF.
         m = BODY_TERMINATOR.search(source, body_start + 1)
