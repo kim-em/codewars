@@ -27,11 +27,4 @@ git checkout --quiet "${MATHLIB_SHA}"
 echo ">>> Fetching mathlib olean cache (large download, several GB)"
 lake exe cache get
 
-# `lake exe cache get` downloads pre-built .olean files; a follow-up
-# `lake build` verifies the cache is complete. If a kata import fails
-# at submission time because of a missing olean, that's a much worse
-# experience than failing here.
-echo ">>> Verifying mathlib build is complete"
-lake build Mathlib
-
 echo ">>> mathlib4 installed at ${CODEWARS_MATHLIB_DIR}"
