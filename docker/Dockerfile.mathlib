@@ -1,0 +1,33 @@
+## codewars-lean4 runner: mathlib variant.
+## Extends the slim image with a pre-built mathlib4 v4.30.0 olean cache
+## so katas that import Mathlib (or a Mathlib submodule) build in seconds
+## instead of hours.
+##
+## Build:  docker build -t codewars-lean4:slim    -f docker/Dockerfile.slim    .
+##         docker build -t codewars-lean4:mathlib -f docker/Dockerfile.mathlib .
+##
+## Image size: target ~6-8 GB. Mathlib's olean cache is the dominant
+## cost; everything else is shared with the slim image.
+
+FROM codewars-lean4:slim
+
+USER judge
+WORKDIR /opt/codewars
+
+# install-mathlib.sh clones mathlib4 at the pinned SHA into
+# CODEWARS_MATHLIB_DIR and runs `lake exe cache get` followed by
+# `lake build Mathlib` so the olean cache is verified-complete at
+# image-build time, not at the first kata submission.
+RUN bash scripts/install-mathlib.sh
+
+# Workspace template's lakefile.toml is the slim variant by default.
+# Swap it for the mathlib variant so the adapter (codewars-shape mode)
+# and verify-installation.sh both pick up the mathlib path-dep.
+RUN cp runner/workspace-template-mathlib/lakefile.toml \
+       runner/workspace-template/lakefile.toml
+
+# Prune mathlib's git history; we only need .lake/build for runtime.
+RUN rm -rf /opt/codewars/mathlib/.git
+
+WORKDIR /workdir
+ENTRYPOINT ["/opt/codewars/runner/judge"]
