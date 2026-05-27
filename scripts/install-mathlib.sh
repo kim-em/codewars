@@ -27,12 +27,21 @@ git checkout --quiet "${MATHLIB_SHA}"
 echo ">>> Fetching mathlib olean cache (large download, several GB)"
 lake exe cache get
 
-# lake exe cache get extracts olean/ilean files with restrictive modes
-# that block Lake's replay at kata submission time — replay writes a
-# .ilean.hash next to each .ilean to record the trace, and the parent
-# dirs come out of the cache archive read-only. Re-grant write to the
-# install user; this is owner-only, so it doesn't widen access.
-chmod -R u+w "${CODEWARS_MATHLIB_DIR}/.lake"
+# lake exe cache get extracts files with restrictive modes (read-only
+# directories in particular) that block Lake's hash-file writes at
+# kata submission time. Add owner read/write to every file and rwx to
+# every directory under .lake so Lake can both traverse and create.
+find "${CODEWARS_MATHLIB_DIR}/.lake" -type d -exec chmod u+rwx {} +
+find "${CODEWARS_MATHLIB_DIR}/.lake" -type f -exec chmod u+rw  {} +
+
+# `lake exe cache get` ships oleans + ileans but NOT the .hash trace
+# files Lake's incremental-build replay expects. Running `lake build`
+# here materialises every .hash file using the cached oleans, so kata
+# submissions can replay traces read-only without trying to write
+# back into /opt/codewars/mathlib. Fast because all oleans are cached
+# already — Lake just hashes the inputs and writes the trace markers.
+echo ">>> Materialising mathlib hash trace files (lake build w/ cached oleans)"
+lake build Mathlib
 
 # Build a skeleton workspace that mirrors the runtime kata workspace,
 # resolve its dependencies, and BUILD workspace_test ONCE here (with
