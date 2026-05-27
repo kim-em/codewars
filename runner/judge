@@ -77,6 +77,19 @@ cd "${WORKDIR}"
 # Pin the toolchain (overrides anything in the user-provided workspace).
 cp "${RUNNER_DIR}/workspace-template/lean-toolchain" lean-toolchain
 
+# Mathlib variant only: inherit the skeleton's resolved manifest and
+# its cloned-package tree so Lake can resolve mathlib's transitive
+# deps without network. The skeleton was prepared by
+# scripts/install-mathlib.sh at image-build time. We symlink
+# .lake/packages so we don't duplicate the multi-hundred-MB clones
+# per submission; the workspace's own .lake/build is separate.
+SKELETON="${CODEWARS_PREFIX:-/opt/codewars}/mathlib-skeleton"
+if [ -f "${SKELETON}/lake-manifest.json" ]; then
+    cp "${SKELETON}/lake-manifest.json" lake-manifest.json
+    mkdir -p .lake
+    ln -sfn "${SKELETON}/.lake/packages" .lake/packages
+fi
+
 # Build ONLY the trusted exe. defaultTargets in workspace-template/lakefile.toml
 # is set to ["workspace_test"], so this does NOT elaborate Submission.lean.
 # Capture build output for diagnostics.

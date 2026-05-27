@@ -27,27 +27,33 @@ git checkout --quiet "${MATHLIB_SHA}"
 echo ">>> Fetching mathlib olean cache (large download, several GB)"
 lake exe cache get
 
-# After cache get, ${CODEWARS_MATHLIB_DIR}/.lake/packages/ contains every
-# transitive dep mathlib needs (aesop, batteries, Qq, proofwidgets,
-# plausible, importGraph, LeanSearchClient, ...). The runtime workspace
-# must declare path-deps for each of these so Lake doesn't try to
-# re-clone them at submission time (when the container has no network).
-LAKEFILE="${REPO_ROOT}/runner/workspace-template-mathlib/lakefile.toml"
-{
-    echo ""
-    echo "# Path-deps for mathlib's transitive dependencies, appended at"
-    echo "# install-mathlib.sh time so the runtime workspace builds with"
-    echo "# --network=none. Order of these entries does not matter."
-    for pkg_dir in "${CODEWARS_MATHLIB_DIR}/.lake/packages/"*; do
-        [ -d "${pkg_dir}" ] || continue
-        pkg_name="$(basename "${pkg_dir}")"
-        echo ""
-        echo "[[require]]"
-        echo "name = \"${pkg_name}\""
-        echo "path = \"${pkg_dir}\""
-    done
-} >> "${LAKEFILE}"
+# Build a skeleton workspace and resolve its dependencies ONCE here
+# (with network). Mathlib's post-update hook runs as part of `lake
+# update`, generating a lake-manifest.json that pins every transitive
+# dep at the SHA mathlib itself pins. We then reuse the skeleton's
+# manifest + .lake/packages/ for every kata submission, so submissions
+# build with --network=none and don't trigger the post-update hook.
+SKELETON="${CODEWARS_PREFIX}/mathlib-skeleton"
+echo ">>> Building mathlib workspace skeleton at ${SKELETON}"
+mkdir -p "${SKELETON}"
+cd "${SKELETON}"
+
+cat > lakefile.toml <<EOF
+name = "mathlib-skeleton"
+
+[[require]]
+name = "mathlib"
+path = "${CODEWARS_MATHLIB_DIR}"
+EOF
+
+cp "${REPO_ROOT}/runner/workspace-template/lean-toolchain" lean-toolchain
+
+# Triggers cloning of mathlib's transitive deps into .lake/packages/
+# and writes a lake-manifest.json. Network required here; never again.
+lake update
+
+echo ">>> Skeleton populated:"
+ls -1 "${SKELETON}/.lake/packages/" 2>/dev/null || echo "(none)"
+test -f "${SKELETON}/lake-manifest.json" || { echo "FATAL: skeleton manifest not generated" >&2; exit 1; }
 
 echo ">>> mathlib4 installed at ${CODEWARS_MATHLIB_DIR}"
-echo ">>> Transitive packages registered in ${LAKEFILE}:"
-ls -1 "${CODEWARS_MATHLIB_DIR}/.lake/packages/"
