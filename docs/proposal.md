@@ -25,10 +25,18 @@ on the maintenance burden of the underlying judging stack.
 
 ## Two images, both at v4.30.0
 
-| Image                          | Size target | Contents                                                              |
+| Image                          | Size        | Contents                                                              |
 |--------------------------------|-------------|-----------------------------------------------------------------------|
-| `codewars-lean4:slim`          | <1 GB       | Lean v4.30.0 + comparator + lean4export + landrun                     |
-| `codewars-lean4:mathlib`       | ~6-8 GB     | slim + mathlib4 v4.30.0 with a verified-complete olean cache          |
+| `codewars-lean4:slim`          | ~3.85 GB    | Lean v4.30.0 + comparator + lean4export + landrun                     |
+| `codewars-lean4:mathlib`       | ~10 GB est. | slim + mathlib4 v4.30.0 with a verified-complete olean cache          |
+
+Slim size is measured by CI on the actual `Dockerfile.slim`
+(https://github.com/kim-em/codewars/actions/runs/26521756301). The
+toolchain itself is the dominant cost — Lean's distribution includes
+core stdlib oleans and Lake. The mathlib estimate is projected from
+mathlib4's documented olean cache (~6 GB) on top of the measured slim
+base; will be replaced with a measurement once the mathlib image is
+built in CI.
 
 The Lean 3 corpus on Codewars today is authored against mathlib3
 (see https://docs.codewars.com/languages/lean/). Existing katas that
@@ -87,9 +95,10 @@ from Mathlib.
 
 ## Operational characteristics
 
-- **Image sizes:** slim is targeting <1 GB; mathlib variant is
-  ~6-8 GB, dominated by mathlib's olean cache. The mathlib image
-  builds on top of slim, so the slim image is a strict subset.
+- **Image sizes:** slim measures at ~3.85 GB in CI; mathlib variant
+  is projected at ~10 GB, with mathlib's olean cache adding ~6 GB
+  on top. The mathlib image builds FROM slim, so the slim image is
+  a strict subset.
 
 - **Runtime budget:** comparator's cold-start cost on a pre-built
   workspace is the figure that needs to fit inside Codewars'
