@@ -27,7 +27,7 @@ yourself** — it would nest inside the runner's, producing
 
 ## What's available
 
-- **Lean v4.30.0**, exactly. Update with each new image.
+- **Lean v4.35.0**, exactly. Update with each new image.
 - **Core Lean 4 only.** No Mathlib, no batteries.
 - The standard tactics are all there: `simp`, `rw`, `omega`, `decide`,
   `induction`, `cases`, `rfl`, `exact`, `apply`, `refine`, `constructor`,
@@ -109,7 +109,7 @@ locally first, then paste once your proof compiles.
 # Install elan if you don't have it.
 curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh
 # Install the kata's toolchain.
-elan toolchain install leanprover/lean4:v4.30.0
+elan toolchain install leanprover/lean4:v4.35.0
 ```
 
 ### Workflow
@@ -120,7 +120,7 @@ elan toolchain install leanprover/lean4:v4.30.0
    ```
 2. Drop in a `lean-toolchain` file:
    ```
-   leanprover/lean4:v4.30.0
+   leanprover/lean4:v4.35.0
    ```
 3. Save the kata's `Preloaded.lean` as `Preloaded.lean`. Make sure its
    declarations are accessible at the top level. (No namespace.)

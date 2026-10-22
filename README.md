@@ -8,7 +8,7 @@ Codewars currently supports
 end-of-life. This repo packages everything Codewars' runner team would
 need to drop Lean 4 into their infrastructure:
 
-- pinned toolchain (`leanprover/lean4:v4.30.0`),
+- pinned toolchain (`leanprover/lean4:v4.35.0`),
 - pinned build of [`comparator`](https://github.com/leanprover/comparator)
   + [`lean4export`](https://github.com/leanprover/lean4export) +
   [`landrun`](https://github.com/Zouuup/landrun) (the judging stack
@@ -47,7 +47,7 @@ docker run --rm --network=none \
 
 ```
 versions.env              # All pins (SHAs)
-lean-toolchain            # leanprover/lean4:v4.30.0
+lean-toolchain            # leanprover/lean4:v4.35.0
 scripts/                  # prepare-runner + install-* scripts
 runner/                   # judge entrypoint + adapter + templates
 docker/Dockerfile.slim    # runner image
