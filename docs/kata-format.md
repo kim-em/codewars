@@ -86,7 +86,7 @@ Required files:
 | File              | Role                                                   |
 |-------------------|--------------------------------------------------------|
 | `lakefile.toml`   | `defaultTargets = ["workspace_test"]`. See template.   |
-| `lean-toolchain`  | `leanprover/lean4:v4.30.0`.                            |
+| `lean-toolchain`  | `leanprover/lean4:v4.35.0`.                            |
 | `Challenge.lean`  | Theorem statements with `by sorry` bodies.             |
 | `Solution.lean`   | Same statements; bodies reference `Submission.<name>`. |
 | `Submission.lean` | `namespace Submission ... end Submission`.             |

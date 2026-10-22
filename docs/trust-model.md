@@ -6,11 +6,11 @@ Lean 4 katas, and what they don't.
 ## What Codewars must trust
 
 1. **The Lean kernel** (shipped as part of the
-   `leanprover/lean4:v4.30.0` toolchain). This is the same trust
+   `leanprover/lean4:v4.35.0` toolchain). This is the same trust
    assumption every Lean 4 proof rests on.
 
 2. **The toolchain build** — i.e. that the elan-distributed
-   `leanprover/lean4:v4.30.0` Linux binaries actually correspond to
+   `leanprover/lean4:v4.35.0` Linux binaries actually correspond to
    the source at that tag. This is standard for any Lean deployment.
 
 3. **`comparator`** (https://github.com/leanprover/comparator) at
@@ -86,7 +86,7 @@ remain in scope for future hardening (tracked in
 - **Toolchain-version pinning attacks.** A submission can't change
   `lean-toolchain` mid-build, but a kata author could pin a vulnerable
   Lean version. The runner overwrites `lean-toolchain` with the
-  workspace-template's pin (`v4.30.0`); kata authors get one Lean
+  workspace-template's pin (`v4.35.0`); kata authors get one Lean
   version per runner image.
 
 ## Why we chose comparator over simpler heuristics
